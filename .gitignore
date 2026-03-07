@@ -1,0 +1,44 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/app/__pycache__/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# 環境變數（含密鑰，不可推到公開 repo）
+.env
+.env.*
+!.env.example
+
+# 產生的圖檔（sionna 輸出，數量多且可重新產生）
+backend/app/static/images/
+
+# 上傳的照片（使用者資料，不應推到 repo）
+backend/uploads/
+backend/app/uploads/
+backend/*.json
+backend/app/uploads/photos.json
+
+# 系統暫存
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Log
+*.log
+/tmp/

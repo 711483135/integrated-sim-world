@@ -1,0 +1,54 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gpstracker_backend
+    ports:
+      - '8888:8000'
+    volumes:
+      - ./backend:/app
+      - upload_data:/app/uploads
+    environment:
+      PYTHONUNBUFFERED: '1'
+    networks:
+      - app-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gpstracker_frontend
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend:/app
+      - node_modules:/app/node_modules
+    networks:
+      - app-net
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gpstracker_cloudflared
+    # 使用 config.yml 方式（需先建立 tunnel，見 README）
+    command: tunnel --no-autoupdate run
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+    networks:
+      - app-net
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  upload_data:
+  node_modules:

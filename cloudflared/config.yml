@@ -1,0 +1,11 @@
+tunnel: c85697e6-ff3d-426e-b689-1de63c3f3338
+credentials-file: /home/eating0527/.cloudflared/c85697e6-ff3d-426e-b689-1de63c3f3338.json
+
+ingress:
+  # WebSocket + REST API 走後端（/ws、/api、/uploads）
+  - hostname: backend.simworld.website
+    service: http://localhost:8000
+  # 前端（含 Vite proxy）
+  - hostname: frontend.simworld.website
+    service: http://localhost:5173
+  - service: http_status:404
