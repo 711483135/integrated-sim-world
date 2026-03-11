@@ -36,14 +36,15 @@ export function GPSStatus({
   localGPS,
   selectedDeviceId,
   onSelectDevice,
-}: Props) {
+  style,
+}: Props & { style?: React.CSSProperties }) {
   const key = (connectionStatus as StatusKey) in STATUS_MAP ? connectionStatus as StatusKey : 'disconnected';
   const st = STATUS_MAP[key];
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   return (
     <div style={{
-      position: 'fixed', top: 14, left: 14, zIndex: 999,
+      position: 'fixed', top: 14, right: 14, zIndex: 999,
       background: 'rgba(8,12,28,0.75)',
       backdropFilter: 'blur(18px)',
       WebkitBackdropFilter: 'blur(18px)',
@@ -55,6 +56,7 @@ export function GPSStatus({
       border: '1px solid rgba(120,180,255,0.14)',
       boxShadow: '0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
       animation: 'slide-in-left 0.3s ease',
+      ...style
     }}>
 
       {/* ── 連線狀態 ── */}

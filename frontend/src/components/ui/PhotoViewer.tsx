@@ -57,7 +57,7 @@ export function PhotoViewer({ photos, onDelete }: Props) {
     <>
       {/* ── 照片歷史面板 ── */}
       <div style={{
-        position: 'fixed', bottom: 14, right: 14, zIndex: 1000,
+        position: 'fixed', bottom: 70, right: 14, zIndex: 900,
         background: 'rgba(8,12,28,0.75)',
         backdropFilter: 'blur(18px)',
         WebkitBackdropFilter: 'blur(18px)',

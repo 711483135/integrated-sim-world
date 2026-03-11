@@ -1,15 +1,9 @@
-/**
- * SimulationPanel — Sionna 無線模擬結果面板 (Glassmorphism)
- *
- * 提供四個頁籤：SINR Map | CFR | Doppler | Channel Response
- * 點擊「計算」按鈕觸發後端 API，並顯示回傳的 PNG 圖片。
- */
-import { useState, useCallback } from 'react';
+﻿import { useState, useCallback } from 'react';
+import { useDeviceStore } from '../../store/useDeviceStore';
 
 const API = import.meta.env.VITE_API_URL || '';
 
-// ── 型別 ────────────────────────────────────────────────────────────
-type TabKey = 'sinr' | 'cfr' | 'doppler' | 'channel';
+type TabKey = 'sinr' | 'cfr' | 'doppler' | 'channel' | 'iss' | 'tss' | 'cfar';
 
 interface SINRParams {
   sinr_vmin: number;
@@ -26,7 +20,6 @@ interface SimStatus {
 
 const EMPTY: SimStatus = { loading: false, imageUrl: null, error: null };
 
-// ── Helpers ─────────────────────────────────────────────────────────
 function buildSinrUrl(params: SINRParams): string {
   const q = new URLSearchParams({
     sinr_vmin: String(params.sinr_vmin),
@@ -37,8 +30,7 @@ function buildSinrUrl(params: SINRParams): string {
   return `${API}/api/sionna/sinr-map?${q.toString()}`;
 }
 
-// ── Component ────────────────────────────────────────────────────────
-export function SimulationPanel() {
+export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabKey>('sinr');
   const [status, setStatus] = useState<Record<TabKey, SimStatus>>({
@@ -46,33 +38,52 @@ export function SimulationPanel() {
     cfr:     { ...EMPTY },
     doppler: { ...EMPTY },
     channel: { ...EMPTY },
+    iss:     { ...EMPTY },
+    tss:     { ...EMPTY },
+    cfar:    { ...EMPTY },
   });
 
-  // SINR 參數
   const [sinrParams, setSinrParams] = useState<SINRParams>({
     sinr_vmin: -20,
     sinr_vmax: 40,
-    cell_size: 5.0,     // 較大格子 → 少計算點
-    samples_per_tx: 100000,  // 預設 100K，夠快又能看出結果
+    cell_size: 5.0,
+    samples_per_tx: 100000,
   });
 
-  // ── 通用計算觸發 ─────────────────────────────────────────────────
+  const devices = useDeviceStore(state => state.devices);
+
   const compute = useCallback(async (key: TabKey) => {
     setStatus(prev => ({ ...prev, [key]: { loading: true, imageUrl: null, error: null } }));
 
-    const urlMap: Record<TabKey, string> = {
-      sinr:    buildSinrUrl(sinrParams),
-      cfr:     `${API}/api/sionna/cfr-plot`,
-      doppler: `${API}/api/sionna/doppler`,
-      channel: `${API}/api/sionna/channel-response`,
-    };
-
     try {
-      const res = await fetch(urlMap[key]);
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(json.error ?? `HTTP ${res.status}`);
+      let res;
+      if (['iss', 'tss', 'cfar'].includes(key)) {
+        res = await fetch(`${API}/api/simulate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scene: sceneId,
+            map_type: key,
+            cell_size: sinrParams.cell_size,
+            samples_per_tx: sinrParams.samples_per_tx,
+            devices: devices
+          }),
+        });
+      } else {
+        const urlMap: Record<string, string> = {
+          sinr:    buildSinrUrl(sinrParams),
+          cfr:     `${API}/api/sionna/cfr-plot`,
+          doppler: `${API}/api/sionna/doppler`,
+          channel: `${API}/api/sionna/channel-response`,
+        };
+        res = await fetch(urlMap[key]);
       }
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({ error: 'HTTP Error' }));
+        throw new Error(json.detail || json.error || 'HTTP Error');
+      }
+      
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
       setStatus(prev => ({ ...prev, [key]: { loading: false, imageUrl: url, error: null } }));
@@ -80,20 +91,18 @@ export function SimulationPanel() {
       const msg = err instanceof Error ? err.message : String(err);
       setStatus(prev => ({ ...prev, [key]: { loading: false, imageUrl: null, error: msg } }));
     }
-  }, [sinrParams]);
+  }, [sinrParams, sceneId, devices]);
 
   const cur = status[tab];
 
-  // ────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* 觸發按鈕（左下角） */}
       <button
         onClick={() => setOpen(v => !v)}
         style={{
           position:    'fixed',
           bottom:       14,
-          left:         14,
+          right:        14,
           zIndex:       1000,
           background:   open
             ? 'linear-gradient(135deg, #0ff 0%, #09f 100%)'
@@ -114,14 +123,13 @@ export function SimulationPanel() {
         📡 無線模擬
       </button>
 
-      {/* 面板 */}
       {open && (
         <div style={{
           position:       'fixed',
           bottom:          60,
-          left:            14,
+          right:           14,
           zIndex:          999,
-          width:           380,
+          width:           440,
           maxHeight:       '80vh',
           display:         'flex',
           flexDirection:   'column',
@@ -134,13 +142,7 @@ export function SimulationPanel() {
           animation:       'slide-in-left .25s ease',
         }}>
 
-          {/* 標題列 */}
-          <div style={{
-            padding:      '12px 16px 0',
-            display:      'flex',
-            alignItems:   'center',
-            gap:          8,
-          }}>
+          <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ color: '#0ff', fontSize: 13, fontWeight: 700, letterSpacing: 1, flex: 1 }}>
               SIONNA 無線通道模擬
             </span>
@@ -154,23 +156,21 @@ export function SimulationPanel() {
           </div>
 
           {/* 頁籤 */}
-          <div style={{
-            display:    'flex',
-            gap:         4,
-            padding:    '10px 12px 0',
-            flexShrink:  0,
-          }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '10px 12px 0', flexShrink: 0 }}>
             {([
               { key: 'sinr',    label: 'SINR Map' },
               { key: 'cfr',     label: 'CFR' },
               { key: 'doppler', label: 'Doppler' },
               { key: 'channel', label: 'Channel IR' },
+              { key: 'iss',     label: 'ISS Map' },
+              { key: 'tss',     label: 'TSS Map' },
+              { key: 'cfar',    label: 'ISS+CFAR Map' },
             ] as { key: TabKey; label: string }[]).map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
                 style={{
-                  flex:         1,
+                  flex:         '1 1 20%',
                   padding:      '5px 4px',
                   background:   tab === key
                     ? 'linear-gradient(135deg,rgba(0,255,255,.25),rgba(0,153,255,.25))'
@@ -192,28 +192,27 @@ export function SimulationPanel() {
             ))}
           </div>
 
-          {/* 捲動內容區 */}
-          <div style={{
-            flex:       1,
-            overflowY:  'auto',
-            padding:    '12px 16px 16px',
-          }}>
-            {/* SINR 專屬參數 */}
-            {tab === 'sinr' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 16px' }}>
+            {/* SINR 或 ISS/TSS/CFAR 專屬參數 */}
+            {['sinr', 'iss', 'tss', 'cfar'].includes(tab) && (
               <div style={{ marginBottom: 12 }}>
                 <ParamGrid>
-                  <Label>SINR Min (dB)</Label>
-                  <NumberInput
-                    value={sinrParams.sinr_vmin}
-                    step={5} min={-60} max={0}
-                    onChange={v => setSinrParams(p => ({ ...p, sinr_vmin: v }))}
-                  />
-                  <Label>SINR Max (dB)</Label>
-                  <NumberInput
-                    value={sinrParams.sinr_vmax}
-                    step={5} min={0} max={80}
-                    onChange={v => setSinrParams(p => ({ ...p, sinr_vmax: v }))}
-                  />
+                  {tab === 'sinr' && (
+                    <>
+                      <Label>SINR Min (dB)</Label>
+                      <NumberInput
+                        value={sinrParams.sinr_vmin}
+                        step={5} min={-60} max={0}
+                        onChange={v => setSinrParams(p => ({ ...p, sinr_vmin: v }))}
+                      />
+                      <Label>SINR Max (dB)</Label>
+                      <NumberInput
+                        value={sinrParams.sinr_vmax}
+                        step={5} min={0} max={80}
+                        onChange={v => setSinrParams(p => ({ ...p, sinr_vmax: v }))}
+                      />
+                    </>
+                  )}
                   <Label>Cell Size (m)</Label>
                   <NumberInput
                     value={sinrParams.cell_size}
@@ -226,20 +225,15 @@ export function SimulationPanel() {
                     onChange={e => setSinrParams(p => ({ ...p, samples_per_tx: Number(e.target.value) }))}
                     style={selectStyle}
                   >
-                    {[
-                      [10000,   '10K  (~30s)'],
-                      [100000,  '100K (~2min)'],
-                      [500000,  '500K (~10min)'],
-                      [1000000, '1M   (~20min)'],
-                    ].map(([v, label]) => (
-                      <option key={v} value={v}>{label}</option>
-                    ))}
+                    <option value={10000}>10K (~30s)</option>
+                    <option value={100000}>100K (~2min)</option>
+                    <option value={500000}>500K (~10min)</option>
+                    <option value={1000000}>1M (~20min)</option>
                   </select>
                 </ParamGrid>
               </div>
             )}
 
-            {/* 計算按鈕 */}
             <button
               onClick={() => compute(tab)}
               disabled={cur.loading}
@@ -263,48 +257,21 @@ export function SimulationPanel() {
               {cur.loading ? '⏳ 計算中…' : '▶ 開始計算'}
             </button>
 
-            {/* 錯誤訊息 */}
             {cur.error && (
               <div style={{
-                background:   'rgba(255,50,80,.12)',
-                border:       '1px solid rgba(255,50,80,.3)',
-                borderRadius:  8,
-                padding:      '8px 12px',
-                color:        '#ff6080',
-                fontSize:      12,
-                marginBottom:  10,
-                wordBreak:     'break-all',
-              }}>
-                ⚠ {cur.error}
-              </div>
+                background: 'rgba(255,50,80,.12)', border: '1px solid rgba(255,50,80,.3)',
+                borderRadius: 8, padding: '8px 12px', color: '#ff6080', fontSize: 12, marginBottom: 10, wordBreak: 'break-all'
+              }}>⚠ {cur.error}</div>
             )}
 
-            {/* 結果圖片 */}
             {cur.imageUrl && (
-              <div style={{
-                borderRadius:  10,
-                overflow:      'hidden',
-                border:        '1px solid rgba(0,255,255,.15)',
-                boxShadow:     '0 4px 20px rgba(0,0,0,.4)',
-              }}>
-                <img
-                  src={cur.imageUrl}
-                  alt={tab}
-                  style={{ width: '100%', display: 'block' }}
-                  onClick={() => window.open(cur.imageUrl!, '_blank')}
-                  title="點擊在新分頁開啟"
-                />
+              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(0,255,255,.15)', boxShadow: '0 4px 20px rgba(0,0,0,.4)' }}>
+                <img src={cur.imageUrl} alt={tab} style={{ width: '100%', display: 'block' }} onClick={() => window.open(cur.imageUrl!, '_blank')} title="點擊在新分頁開啟" />
               </div>
             )}
 
-            {/* 空狀態 */}
             {!cur.loading && !cur.imageUrl && !cur.error && (
-              <p style={{
-                textAlign:  'center',
-                color:      'rgba(255,255,255,.25)',
-                fontSize:   12,
-                marginTop:  16,
-              }}>
+              <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.25)', fontSize: 12, marginTop: 16 }}>
                 按下「開始計算」以產生模擬圖
               </p>
             )}
@@ -315,15 +282,11 @@ export function SimulationPanel() {
   );
 }
 
-// ── 小型子元件 ────────────────────────────────────────────────────────
-
 function ParamGrid({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      display:             'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap:                 '6px 8px',
-      alignItems:          'center',
+      display: 'grid', gridTemplateColumns: 'minmax(80px, auto) 1fr',
+      gap: '8px 12px', alignItems: 'center', background: 'rgba(0,0,0,.2)', padding: 12, borderRadius: 12
     }}>
       {children}
     </div>
@@ -331,43 +294,22 @@ function ParamGrid({ children }: { children: React.ReactNode }) {
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{ color: 'rgba(255,255,255,.6)', fontSize: 11 }}>{children}</span>
-  );
+  return <div style={{ color: 'rgba(255,255,255,.6)', fontSize: 12 }}>{children}</div>;
 }
 
-function NumberInput({
-  value, step, min, max, onChange,
-}: {
-  value: number; step: number; min: number; max: number;
-  onChange: (v: number) => void;
-}) {
+function NumberInput({ value, step, min, max, onChange }: { value: number, step: number, min: number, max: number, onChange: (v: number) => void }) {
   return (
-    <input
-      type="number"
-      value={value}
-      step={step}
-      min={min}
-      max={max}
+    <input type="number" step={step} min={min} max={max} value={value}
       onChange={e => onChange(Number(e.target.value))}
-      style={inputStyle}
+      style={{
+        background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.1)',
+        color: '#fff', padding: '4px 8px', borderRadius: 6, fontSize: 12, width: '100%'
+      }}
     />
   );
 }
 
-const inputStyle: React.CSSProperties = {
-  width:           '100%',
-  padding:         '4px 8px',
-  background:      'rgba(255,255,255,.06)',
-  border:          '1px solid rgba(0,255,255,.2)',
-  borderRadius:     6,
-  color:           '#e0f8ff',
-  fontSize:        12,
-  outline:         'none',
-  boxSizing:       'border-box',
-};
-
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  cursor: 'pointer',
+const selectStyle = {
+  background: 'rgba(0,0,0,.3)', border: '1px solid rgba(255,255,255,.1)', color: '#fff',
+  padding: '4px 8px', borderRadius: 6, fontSize: 12, width: '100%', cursor: 'pointer'
 };

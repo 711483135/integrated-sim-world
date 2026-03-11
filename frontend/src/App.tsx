@@ -18,6 +18,9 @@ import { latLonToENU } from './utils/geo';
 import { SimulationPanel } from './components/ui/SimulationPanel';
 import { SceneSwitcher } from './components/ui/SceneSwitcher';
 import { type SceneId, DEFAULT_SCENE_ID, getSceneById } from './config/scenes.config';
+import { DevicePanel } from './components/ui/DevicePanel';
+import { UAVControlPanel } from './components/ui/UAVControlPanel';
+import { useManualControl } from './hooks/useManualControl';
 
 // ── 環境變數 ────────────────────────────────────────────────────────
 
@@ -49,6 +52,20 @@ interface Photo {
 // ── App ─────────────────────────────────────────────────────────────
 export function App() {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // ── UAV Control Panel 狀態 ───────────────────────────────────────
+  const [auto, setAuto] = useState(false);
+  const [uavAnimation, setUavAnimation] = useState(false);
+  const { manualDirection, handleManualControl, resetManualControl } = useManualControl();
+
+  const handleToggleAuto = useCallback(() => {
+    setAuto(prev => !prev);
+    resetManualControl();
+  }, [resetManualControl]);
+
+  const handleManualMoveDone = useCallback(() => {
+    resetManualControl();
+  }, [resetManualControl]);
 
   // ── 場景管理 ────────────────────────────────────────────────
   const [sceneId, setSceneId] = useState<SceneId>(DEFAULT_SCENE_ID);
@@ -190,7 +207,42 @@ export function App() {
     <div style={{ width: '100vw', height: '100dvh', position: 'relative' }}>
 
       {/* 3D 場景 */}
-      <MainScene uavPosition={uavPosition} uavPath={uavPath} sceneId={sceneId} />
+      <MainScene
+        uavPosition={uavPosition}
+        uavPath={uavPath}
+        sceneId={sceneId}
+        auto={auto}
+        manualDirection={manualDirection}
+        onManualMoveDone={handleManualMoveDone}
+        uavAnimation={uavAnimation}
+        onPositionUpdate={(pos) => {
+          setUavPosition(pos);
+          setUavPath(prev => {
+            const last = prev[prev.length - 1];
+            if (last && Math.abs(last.x - pos[0]) < 0.1 && Math.abs(last.z - pos[2]) < 0.1) return prev;
+            return [...prev, { x: pos[0], y: pos[1], z: pos[2] }];
+          });
+        }}
+      />
+
+      {/* Device Configuration 面板 (加入 sim-world-lite 的裝置設定) */}
+      {!isMobile && (
+        <DevicePanel />
+      )}
+
+      {/* UAV Control 面板 (手動控制/自動移動) */}
+      {!isMobile && (
+        <div style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 100 }}>
+          <UAVControlPanel
+            auto={auto}
+            uavAnimation={uavAnimation}
+            uavPosition={uavPosition}
+            onToggleAuto={handleToggleAuto}
+            onToggleAnimation={() => setUavAnimation(prev => !prev)}
+            onManualControl={handleManualControl}
+          />
+        </div>
+      )}
 
       {/* GPS 狀態 HUD */}
       <GPSStatus
@@ -218,7 +270,7 @@ export function App() {
       />
 
       {/* Sionna 無線模擬面板（電腦端） */}
-      {!isMobile && <SimulationPanel />}
+      {!isMobile && <SimulationPanel sceneId={sceneId} />}
 
       {/* 場景切換器 */}
       {!isMobile && (

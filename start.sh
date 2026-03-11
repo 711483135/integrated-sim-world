@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# 一鍵啟動 GPS Tracker（後端 + 前端 + Cloudflare Tunnel）
-# 用法：bash start.sh
-#        bash start.sh --no-tunnel   （不啟動 cloudflared）
+# GPS Tracker startup script (Windows-compatible)
+# Usage: bash start.sh
+#        bash start.sh --no-tunnel
 
 set -e
 
@@ -10,75 +10,75 @@ BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 USE_TUNNEL=true
 
-# ── 載入 .env（取得 CLOUDFLARED_TOKEN）────────────────────────────
 [[ -f "$SCRIPT_DIR/.env" ]] && source "$SCRIPT_DIR/.env"
 
-# ── 參數解析 ───────────────────────────────────────────────────────
 for arg in "$@"; do
   case $arg in
     --no-tunnel) USE_TUNNEL=false ;;
   esac
 done
 
-# ── 顏色輸出 ───────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
-info()    { echo -e "${GREEN}[INFO]${NC}  $*"; }
-warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
-error()   { echo -e "${RED}[ERROR]${NC} $*"; }
+info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
+warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*"; }
 
-# ── 確認依賴 ───────────────────────────────────────────────────────
-[[ -d "$BACKEND_DIR/.venv" ]] || { error "找不到 $BACKEND_DIR/.venv，請先執行：cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt"; exit 1; }
-[[ -d "$FRONTEND_DIR/node_modules" ]] || { error "找不到 node_modules，請先執行：cd frontend && npm install"; exit 1; }
+[[ -d "$BACKEND_DIR/.venv" ]] || { error "Missing .venv, run: cd backend && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt"; exit 1; }
+[[ -d "$FRONTEND_DIR/node_modules" ]] || { error "Missing node_modules, run: cd frontend && npm install"; exit 1; }
 
-# ── Log 資料夾 ─────────────────────────────────────────────────────
 LOG_DIR="$SCRIPT_DIR/.logs"
 mkdir -p "$LOG_DIR"
 
-# ── 儲存子行程 PID ────────────────────────────────────────────────
 PIDS=()
 
 cleanup() {
   echo ""
-  info "正在關閉所有服務..."
+  info "Stopping all services..."
   for pid in "${PIDS[@]}"; do
     kill "$pid" 2>/dev/null && wait "$pid" 2>/dev/null || true
   done
-  info "✅ 已全部關閉"
+  info "All stopped."
   exit 0
 }
 trap cleanup SIGINT SIGTERM
 
-# ── 後端 ──────────────────────────────────────────────────────────
-info "🚀 啟動後端 (port 8000)..."
-"$BACKEND_DIR/.venv/bin/uvicorn" app.main:app \
+if [[ -f "$BACKEND_DIR/.venv/Scripts/uvicorn.exe" ]]; then
+  UVICORN_CMD="$BACKEND_DIR/.venv/Scripts/uvicorn.exe"
+elif [[ -f "$BACKEND_DIR/.venv/Scripts/uvicorn" ]]; then
+  UVICORN_CMD="$BACKEND_DIR/.venv/Scripts/uvicorn"
+else
+  UVICORN_CMD="$BACKEND_DIR/.venv/bin/uvicorn"
+fi
+
+NPM_CMD="$(command -v npm.cmd 2>/dev/null || command -v npm 2>/dev/null || echo npm)"
+
+info "Starting backend (port 8000)..."
+"$UVICORN_CMD" app.main:app \
   --host 0.0.0.0 --port 8000 --reload \
   --app-dir "$BACKEND_DIR" \
   > "$LOG_DIR/backend.log" 2>&1 &
 PIDS+=($!)
-info "   後端 PID: ${PIDS[-1]}  log: .logs/backend.log"
+info "   Backend PID: ${PIDS[-1]}  log: .logs/backend.log"
 
-# ── 等後端起來 ────────────────────────────────────────────────────
 sleep 2
 
-# ── 前端 ──────────────────────────────────────────────────────────
-info "🚀 啟動前端 (port 5173)..."
-(cd "$FRONTEND_DIR" && npm run dev) \
+info "Starting frontend (port 5173)..."
+(cd "$FRONTEND_DIR" && "$NPM_CMD" run dev) \
   > "$LOG_DIR/frontend.log" 2>&1 &
 PIDS+=($!)
-info "   前端 PID: ${PIDS[-1]}  log: .logs/frontend.log"
+info "   Frontend PID: ${PIDS[-1]}  log: .logs/frontend.log"
 
-# ── Cloudflare Tunnel ─────────────────────────────────────────────
 TUNNEL_STARTED=false
 if $USE_TUNNEL; then
-  # 自動搜尋 cloudflared（系統 PATH 或常見位置）
   CF_BIN="$(command -v cloudflared 2>/dev/null \
-    || ls /usr/local/bin/cloudflared /usr/bin/cloudflared \
-           ~/bin/cloudflared ~/.local/bin/cloudflared 2>/dev/null | head -1)"
+    || command -v cloudflared.exe 2>/dev/null \
+    || ls "/mnt/c/Program Files/cloudflared/cloudflared.exe" 2>/dev/null \
+    || ls "/mnt/c/Users/503/AppData/Local/Microsoft/WinGet/Packages/Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe/cloudflared.exe" 2>/dev/null \
+    || true)"
 
   if [[ -x "$CF_BIN" ]]; then
-    info "🌐 啟動 Cloudflare Tunnel (simworld2)..."
-    # 讀取 .env 裡的 token
-    TOKEN=$(grep '^CLOUDFLARED_TOKEN=' "$SCRIPT_DIR/.env" 2>/dev/null | cut -d= -f2-)
+    info "Starting Cloudflare Tunnel..."
+    TOKEN="$(grep '^CLOUDFLARED_TOKEN=' "$SCRIPT_DIR/.env" 2>/dev/null | cut -d= -f2-)"
     if [[ -n "$TOKEN" ]]; then
       "$CF_BIN" tunnel run --token "$TOKEN" \
         > "$LOG_DIR/tunnel.log" 2>&1 &
@@ -90,21 +90,18 @@ if $USE_TUNNEL; then
     TUNNEL_STARTED=true
     info "   Tunnel PID: ${PIDS[-1]}  log: .logs/tunnel.log"
   else
-    warn "找不到 cloudflared，略過 Tunnel"
-    warn "安裝方法：curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o ~/.local/bin/cloudflared && chmod +x ~/.local/bin/cloudflared"
+    warn "cloudflared not found, skipping tunnel"
   fi
 fi
 
-# ── 顯示即時 log ──────────────────────────────────────────────────
 echo ""
-echo -e "${GREEN}══════════════════════════════════════════${NC}"
-echo -e "  前端：${YELLOW}http://localhost:5173${NC}"
-$USE_TUNNEL && echo -e "  公網：${YELLOW}https://frontend.simworld.website${NC}"
-echo -e "  按 Ctrl+C 關閉所有服務"
-echo -e "${GREEN}══════════════════════════════════════════${NC}"
+echo -e "${GREEN}============================================${NC}"
+echo -e "  Frontend : ${YELLOW}http://localhost:5173${NC}"
+$USE_TUNNEL && echo -e "  Public   : ${YELLOW}https://frontend.simworld.website${NC}"
+echo -e "  Press Ctrl+C to stop all services"
+echo -e "${GREEN}============================================${NC}"
 echo ""
 
-# 即時跟蹤所有 log（tail -f 並一起顯示）
 LOG_FILES=("$LOG_DIR/backend.log" "$LOG_DIR/frontend.log")
 $TUNNEL_STARTED && LOG_FILES+=("$LOG_DIR/tunnel.log")
 tail -f "${LOG_FILES[@]}" &

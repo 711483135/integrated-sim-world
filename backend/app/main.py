@@ -391,3 +391,104 @@ async def sionna_channel_response():
     except Exception as e:
         logger.error(f"Channel response error: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
+from pydantic import BaseModel, Field
+from typing import List
+import asyncio
+import io
+from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
+
+class DeviceIn(BaseModel):
+    name: str
+    role: str
+    x: float
+    y: float
+    z: float
+    power_dbm: Optional[float] = Field(default=None)
+
+class SimulateRequest(BaseModel):
+    scene: str
+    map_type: str
+    cell_size: float = Field(default=4.0, gt=0)
+    samples_per_tx: int = Field(default=1000000, ge=10000)
+    devices: List[DeviceIn]
+
+@app.post("/api/simulate")
+async def simulate(req: SimulateRequest):
+    # Determine the absolute path for the XML properly from this main.py file
+    scene_name = req.scene.upper()
+    scene_xml = BASE_DIR / "static" / "scenes" / scene_name / f"{scene_name}.xml"
+    
+    if not scene_xml.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Scene XML not found: {scene_xml}",
+        )
+
+    output_dir = str(BASE_DIR / "static" / "maps" / req.scene.lower())
+    os.makedirs(output_dir, exist_ok=True)
+
+    devices_dicts = [
+        {
+            "name": d.name,
+            "role": d.role,
+            "x": d.x,
+            "y": d.y,
+            "z": d.z,
+            **({"power_dbm": d.power_dbm} if d.power_dbm is not None else {}),
+        }
+        for d in req.devices
+    ]
+
+    logger.info(
+        "Simulation request: scene=%s, map_type=%s, devices=%d",
+        req.scene, req.map_type, len(devices_dicts),
+    )
+
+    try:
+        loop = asyncio.get_event_loop()
+        from app.sionna_service_lite import generate_maps
+
+        out_path: str = await loop.run_in_executor(
+            None,
+            _run_generate_maps,
+            str(scene_xml),
+            devices_dicts,
+            output_dir,
+            req.scene,
+            req.map_type,
+            req.cell_size,
+            req.samples_per_tx,
+        )
+    except Exception as exc:
+        logger.exception("Simulation failed")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    with open(out_path, "rb") as f:
+        image_bytes = f.read()
+
+    return StreamingResponse(
+        io.BytesIO(image_bytes),
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="{req.map_type}_map.png"'},
+    )
+
+def _run_generate_maps(
+    scene_xml: str,
+    devices: list,
+    output_dir: str,
+    scene_name: str,
+    map_type: str,
+    cell_size: float,
+    samples_per_tx: int,
+) -> str:
+    from app.sionna_service_lite import generate_maps
+    return generate_maps(
+        scene_xml_path=scene_xml,
+        devices=devices,
+        output_dir=output_dir,
+        scene_name=scene_name,
+        map_type=map_type,
+        cell_size=cell_size,
+        samples_per_tx=samples_per_tx,
+    )

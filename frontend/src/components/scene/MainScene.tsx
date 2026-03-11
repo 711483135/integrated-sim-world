@@ -1,11 +1,4 @@
-/**
- * MainScene — 主 3D 場景
- *
- * 接收：
- *  - uavPosition  : UAV 目前位置（ENU，由 GPS 驅動）
- *  - uavPath      : UAV 歷史軌跡（ENU 點陣列）
- */
-import { Suspense } from 'react';
+﻿import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import {
   OrbitControls,
@@ -15,12 +8,14 @@ import {
 import { ACESFilmicToneMapping } from 'three';
 import { NTPUScene } from './NTPUScene';
 import { NYCUScene } from './NYCUScene';
-import { UAV } from './UAV';
 import { UAVPath } from './UAVPath';
 import { Starfield } from '../ui/Starfield';
 import { type SceneId, getSceneById, DEFAULT_SCENE_ID } from '@/config/scenes.config';
+import { useDeviceStore } from '@/store/useDeviceStore';
+import { Jam } from './Jam';
+import { Tower } from './Tower';
+import UAVFlight, { UAVManualDirection } from './UAVFlight';
 
-// ── 載入提示 ──────────────────────────────────────────────────────
 function Loader({ label }: { label: string }) {
   return (
     <Html center>
@@ -31,27 +26,39 @@ function Loader({ label }: { label: string }) {
         padding: '16px 32px',
         borderRadius: '8px',
       }}>
-        Loading {label} Scene…
+        Loading {label} Scene...
       </div>
     </Html>
   );
 }
 
-// ── Props ─────────────────────────────────────────────────────────
 interface MainSceneProps {
   uavPosition?: [number, number, number];
   uavPath?: Array<{ x: number; y: number; z: number }>;
   sceneId?: SceneId;
+  auto?: boolean;
+  manualDirection?: UAVManualDirection;
+  onManualMoveDone?: () => void;
+  uavAnimation?: boolean;
+  onPositionUpdate?: (pos: [number, number, number]) => void;
 }
 
-// ── Component ─────────────────────────────────────────────────────
 export function MainScene({
   uavPosition = [0, 10, 0],
   uavPath = [],
   sceneId = DEFAULT_SCENE_ID,
+  auto = false,
+  manualDirection = null,
+  onManualMoveDone,
+  uavAnimation = false,
+  onPositionUpdate,
 }: MainSceneProps) {
   const sceneDef = getSceneById(sceneId);
   const cfg = sceneDef.config;
+
+  const devices = useDeviceStore((s) => s.devices);
+  const txDevices = devices.filter((d) => d.role === 'tx');
+  const jammerDevices = devices.filter((d) => d.role === 'jammer');
 
   return (
     <div style={{
@@ -71,7 +78,6 @@ export function MainScene({
           antialias: true,
         }}
       >
-        {/* 相機 */}
         <PerspectiveCamera
           makeDefault
           position={cfg.camera.initialPosition}
@@ -80,7 +86,6 @@ export function MainScene({
           far={cfg.camera.far}
         />
 
-        {/* 軌道控制 */}
         <OrbitControls
           enableDamping
           dampingFactor={0.05}
@@ -89,7 +94,6 @@ export function MainScene({
           maxPolarAngle={Math.PI / 2}
         />
 
-        {/* 燈光 */}
         <hemisphereLight args={[0xffffff, 0x444444, 1.0]} />
         <ambientLight intensity={0.2} />
         <directionalLight
@@ -108,20 +112,36 @@ export function MainScene({
           shadow-radius={8}
         />
 
-        {/* 3D 場景（依 sceneId 動態切換） */}
         <Suspense fallback={<Loader label={sceneDef.labelEn} />}>
           {sceneId === 'nycu' ? <NYCUScene /> : <NTPUScene />}
         </Suspense>
 
-        {/* UAV 模型 */}
         <Suspense fallback={null}>
-          <UAV position={uavPosition} scale={10} />
+          <UAVFlight
+            position={uavPosition}
+            scale={[10, 10, 10]}
+            auto={auto}
+            manualDirection={manualDirection}
+            onManualMoveDone={onManualMoveDone}
+            onPositionUpdate={onPositionUpdate}
+            uavAnimation={uavAnimation}
+          />
         </Suspense>
 
-        {/* UAV 軌跡線 */}
         <UAVPath path={uavPath} color="#00ff00" lineWidth={3} />
 
-        {/* 星空背景 */}
+        {jammerDevices.map((d) => (
+          <Suspense key={d.id} fallback={null}>
+            <Jam position={[d.x, d.y, d.z]} scale={0.01} />
+          </Suspense>
+        ))}
+
+        {txDevices.map((d) => (
+          <Suspense key={d.id} fallback={null}>
+            <Tower position={[d.x, d.y, d.z]} scale={0.1} />
+          </Suspense>
+        ))}
+
         <Starfield starCount={180} />
       </Canvas>
     </div>
