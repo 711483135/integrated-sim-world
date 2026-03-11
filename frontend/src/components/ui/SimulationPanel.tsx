@@ -1,4 +1,4 @@
-ï»¿import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useDeviceStore } from '../../store/useDeviceStore';
 
 const API = import.meta.env.VITE_API_URL || '';
@@ -66,7 +66,7 @@ export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
             map_type: key,
             cell_size: sinrParams.cell_size,
             samples_per_tx: sinrParams.samples_per_tx,
-            devices: devices
+            devices: devices.map(d => ({ name: d.name, role: d.role, x: d.x, y: d.y, z: d.z, power_dbm: d.powerDbm }))
           }),
         });
       } else {
@@ -120,7 +120,7 @@ export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
           letterSpacing: '.5px',
         }}
       >
-        ğŸ“¡ ç„¡ç·šæ¨¡æ“¬
+        ?? µL½u¼ÒÀÀ
       </button>
 
       {open && (
@@ -144,7 +144,7 @@ export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
 
           <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ color: '#0ff', fontSize: 13, fontWeight: 700, letterSpacing: 1, flex: 1 }}>
-              SIONNA ç„¡ç·šé€šé“æ¨¡æ“¬
+              SIONNA µL½u³q¹D¼ÒÀÀ
             </span>
             <button
               onClick={() => setOpen(false)}
@@ -152,10 +152,10 @@ export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
                 background: 'none', border: 'none', color: 'rgba(255,255,255,.45)',
                 cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 2,
               }}
-            >Ã—</button>
+            >¡Ñ</button>
           </div>
 
-          {/* é ç±¤ */}
+          {/* ­¶ÅÒ */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '10px 12px 0', flexShrink: 0 }}>
             {([
               { key: 'sinr',    label: 'SINR Map' },
@@ -193,7 +193,7 @@ export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 16px' }}>
-            {/* SINR æˆ– ISS/TSS/CFAR å°ˆå±¬åƒæ•¸ */}
+            {/* SINR ©Î ISS/TSS/CFAR ±MÄİ°Ñ¼Æ */}
             {['sinr', 'iss', 'tss', 'cfar'].includes(tab) && (
               <div style={{ marginBottom: 12 }}>
                 <ParamGrid>
@@ -254,25 +254,25 @@ export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
                 marginBottom:   12,
               }}
             >
-              {cur.loading ? 'â³ è¨ˆç®—ä¸­â€¦' : 'â–¶ é–‹å§‹è¨ˆç®—'}
+              {cur.loading ? '? ­pºâ¤¤¡K' : '? ¶}©l­pºâ'}
             </button>
 
             {cur.error && (
               <div style={{
                 background: 'rgba(255,50,80,.12)', border: '1px solid rgba(255,50,80,.3)',
                 borderRadius: 8, padding: '8px 12px', color: '#ff6080', fontSize: 12, marginBottom: 10, wordBreak: 'break-all'
-              }}>âš  {cur.error}</div>
+              }}>? {cur.error}</div>
             )}
 
             {cur.imageUrl && (
               <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(0,255,255,.15)', boxShadow: '0 4px 20px rgba(0,0,0,.4)' }}>
-                <img src={cur.imageUrl} alt={tab} style={{ width: '100%', display: 'block' }} onClick={() => window.open(cur.imageUrl!, '_blank')} title="é»æ“Šåœ¨æ–°åˆ†é é–‹å•Ÿ" />
+                <img src={cur.imageUrl} alt={tab} style={{ width: '100%', display: 'block' }} onClick={() => window.open(cur.imageUrl!, '_blank')} title="ÂIÀ»¦b·s¤À­¶¶}±Ò" />
               </div>
             )}
 
             {!cur.loading && !cur.imageUrl && !cur.error && (
               <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.25)', fontSize: 12, marginTop: 16 }}>
-                æŒ‰ä¸‹ã€Œé–‹å§‹è¨ˆç®—ã€ä»¥ç”¢ç”Ÿæ¨¡æ“¬åœ–
+                «ö¤U¡u¶}©l­pºâ¡v¥H²£¥Í¼ÒÀÀ¹Ï
               </p>
             )}
           </div>
