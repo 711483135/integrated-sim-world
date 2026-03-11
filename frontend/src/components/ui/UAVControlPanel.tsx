@@ -1,4 +1,4 @@
-import type React from 'react';
+﻿import type React from 'react';
 import { useRef, useCallback, useState } from 'react';
 import { ManualDirection } from '../../hooks/useManualControl';
 
@@ -240,11 +240,11 @@ export function UAVControlPanel({
           zIndex:       1000,
           background:   open
             ? 'linear-gradient(135deg, #4af 0%, #09f 100%)'
-            : 'linear-gradient(135deg, rgba(80,160,255,0.15) 0%, rgba(80,160,255,0.2) 100%)',
+            : 'linear-gradient(135deg, #2a7fdf 0%, #1a5cad 100%)',
           border:       '1px solid rgba(80,160,255,0.4)',
           borderRadius: 12,
           padding:      '8px 14px',
-          color:        open ? '#000' : '#4af',
+          color: open ? '#000' : '#fff',
           fontWeight:   700,
           fontSize:     13,
           cursor:       'pointer',

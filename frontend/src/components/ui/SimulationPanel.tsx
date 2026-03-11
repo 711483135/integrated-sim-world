@@ -106,11 +106,11 @@ export function SimulationPanel({ sceneId = 'NTPU' }: { sceneId?: string }) {
           zIndex:       1000,
           background:   open
             ? 'linear-gradient(135deg, #0ff 0%, #09f 100%)'
-            : 'linear-gradient(135deg, rgba(0,255,255,.15) 0%, rgba(0,153,255,.2) 100%)',
+            : 'linear-gradient(135deg, #0ba0a0 0%, #0060a0 100%)',
           border:       '1px solid rgba(0,255,255,.4)',
           borderRadius: 12,
           padding:      '8px 14px',
-          color:        open ? '#000' : '#0ff',
+          color: open ? '#000' : '#fff',
           fontWeight:   700,
           fontSize:     13,
           cursor:       'pointer',
