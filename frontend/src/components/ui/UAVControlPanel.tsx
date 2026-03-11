@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { ManualDirection } from '../../hooks/useManualControl';
 
 const LONG_PRESS_DELAY = 150;   // ms before repeat kicks in
@@ -226,21 +226,66 @@ export function UAVControlPanel({
   onToggleAnimation,
   onManualControl,
 }: UAVControlPanelProps) {
+  const [open, setOpen] = useState(false);
   const [x, y, z] = uavPosition;
 
   return (
-    <div style={S.panel}>
-      <div style={S.title}>UAV Control</div>
+    <>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          position:    'fixed',
+          bottom:       14,
+          right:        125,
+          zIndex:       1000,
+          background:   open
+            ? 'linear-gradient(135deg, #4af 0%, #09f 100%)'
+            : 'linear-gradient(135deg, rgba(80,160,255,0.15) 0%, rgba(80,160,255,0.2) 100%)',
+          border:       '1px solid rgba(80,160,255,0.4)',
+          borderRadius: 12,
+          padding:      '8px 14px',
+          color:        open ? '#000' : '#4af',
+          fontWeight:   700,
+          fontSize:     13,
+          cursor:       'pointer',
+          backdropFilter: 'blur(12px)',
+          boxShadow:    '0 4px 20px rgba(80,160,255,0.2)',
+          transition:   'all .2s',
+          letterSpacing: '.5px',
+        }}
+      >
+        🚁 UAV Control
+      </button>
 
-      {/* Mode toggles */}
-      <div style={S.row}>
-        <button style={toggleBtn(auto, '#4af')} onClick={onToggleAuto}>
-          ⟳ AUTO
-        </button>
-        <button style={toggleBtn(!auto, '#f8a')} onClick={onToggleAuto}>
-          ✦ MANUAL
-        </button>
-      </div>
+      {open && (
+        <div style={{
+          ...S.panel,
+          position: 'fixed',
+          bottom: 60,
+          right: 125,
+          zIndex: 999,
+          animation: 'slide-in-left .25s ease'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ ...S.title, marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>UAV Control</div>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                background: 'none', border: 'none', color: 'rgba(255,255,255,.45)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 2
+              }}
+            >×</button>
+          </div>
+          <div style={{ height: 1, background: 'rgba(80, 160, 255, 0.2)', marginBottom: 12, marginTop: -4 }} />
+
+          {/* Mode toggles */}
+          <div style={S.row}>
+            <button style={toggleBtn(auto, '#4af')} onClick={onToggleAuto}>
+              ⟳ AUTO
+            </button>
+            <button style={toggleBtn(!auto, '#f8a')} onClick={onToggleAuto}>
+              ✦ MANUAL
+            </button>
+          </div>
       <div style={{ ...S.row, marginBottom: '12px' }}>
         <button style={toggleBtn(uavAnimation, '#8f8')} onClick={onToggleAnimation}>
           {uavAnimation ? '▶ ANIM ON' : '⏸ ANIM OFF'}
@@ -297,5 +342,7 @@ export function UAVControlPanel({
         </div>
       </div>
     </div>
+    )}
+    </>
   );
 }

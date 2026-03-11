@@ -230,18 +230,16 @@ export function App() {
         <DevicePanel />
       )}
 
-      {/* UAV Control 面板 (手動控制/自動移動) */}
+      {/* UAV Control */}
       {!isMobile && (
-        <div style={{ position: 'absolute', bottom: 14, left: 14, zIndex: 100 }}>
-          <UAVControlPanel
-            auto={auto}
-            uavAnimation={uavAnimation}
-            uavPosition={uavPosition}
-            onToggleAuto={handleToggleAuto}
-            onToggleAnimation={() => setUavAnimation(prev => !prev)}
-            onManualControl={handleManualControl}
-          />
-        </div>
+        <UAVControlPanel
+          auto={auto}
+          uavAnimation={uavAnimation}
+          uavPosition={uavPosition}
+          onToggleAuto={handleToggleAuto}
+          onToggleAnimation={() => setUavAnimation(prev => !prev)}
+          onManualControl={handleManualControl}
+        />
       )}
 
       {/* GPS 狀態 HUD */}
