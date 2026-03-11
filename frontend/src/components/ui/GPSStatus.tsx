@@ -50,7 +50,7 @@ export function GPSStatus({
       WebkitBackdropFilter: 'blur(18px)',
       borderRadius: 16,
       padding: '14px 16px',
-      color: 'var(--text-primary)',
+      color: 'white',
       fontSize: 13,
       minWidth: 240,
       border: '1px solid rgba(120,180,255,0.14)',
@@ -79,10 +79,10 @@ export function GPSStatus({
             animation: st.pulse ? 'pulse-dot 1.4s ease-in-out infinite' : 'none',
           }} />
         </div>
-        <span style={{ color: st.dot, fontWeight: 600, fontSize: 13, letterSpacing: '0.02em' }}>
+        <span style={{ color: 'white', fontWeight: 600, fontSize: 13, letterSpacing: '0.02em' }}>
           {st.label}
         </span>
-        <span style={{ color: 'var(--text-dim)', fontSize: 11, marginLeft: 'auto', fontFamily: 'monospace' }}>
+        <span style={{ color: 'white', fontSize: 11, marginLeft: 'auto', fontFamily: 'monospace' }}>
           {myDeviceId.slice(0, 8)}…
         </span>
       </div>
@@ -92,41 +92,41 @@ export function GPSStatus({
 
       {/* ── 裝置名稱 ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 11, flexShrink: 0 }}>裝置名稱</span>
+        <span style={{ color: 'white', fontSize: 11, flexShrink: 0 }}>裝置名稱</span>
         <span style={{
-          color: 'var(--accent-cyan)', fontWeight: 600, fontSize: 13,
+          color: 'white', fontWeight: 600, fontSize: 13,
           flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{deviceName}</span>
         <button
           onClick={onRenameClick}
           style={{
-            background: 'rgba(0,212,255,0.1)',
-            border: '1px solid rgba(0,212,255,0.3)',
-            color: 'var(--accent-cyan)',
+            background: 'rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            color: 'white',
             fontSize: 11, padding: '3px 10px',
             borderRadius: 20, cursor: 'pointer',
             transition: 'background 0.2s',
             flexShrink: 0,
           }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.2)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,212,255,0.1)')}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
         >改名</button>
       </div>
 
       {/* ── 本機 GPS（手機端） ── */}
       {isMobile && localGPS && localGPS.lat !== 0 && (
         <div style={{
-          background: 'rgba(0,255,136,0.07)',
-          border: '1px solid rgba(0,255,136,0.15)',
+          background: 'rgba(255,255,255,0.07)',
+          border: '1px solid rgba(255,255,255,0.15)',
           borderRadius: 10, padding: '8px 12px', marginBottom: 10,
         }}>
-          <div style={{ color: 'var(--accent-green)', fontSize: 12, fontFamily: 'monospace', lineHeight: 1.7 }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: 10 }}>LAT </span>{localGPS.lat.toFixed(6)}
+          <div style={{ color: 'white', fontSize: 12, fontFamily: 'monospace', lineHeight: 1.7 }}>
+            <span style={{ color: 'white', fontSize: 10 }}>LAT </span>{localGPS.lat.toFixed(6)}
             <br />
-            <span style={{ color: 'var(--text-secondary)', fontSize: 10 }}>LON </span>{localGPS.lon.toFixed(6)}
+            <span style={{ color: 'white', fontSize: 10 }}>LON </span>{localGPS.lon.toFixed(6)}
             <br />
-            <span style={{ color: 'var(--text-secondary)', fontSize: 10 }}>ALT </span>{localGPS.alt.toFixed(1)} m
-            <span style={{ color: 'var(--text-dim)', fontSize: 10, marginLeft: 8 }}>±{localGPS.accuracy.toFixed(0)} m</span>
+            <span style={{ color: 'white', fontSize: 10 }}>ALT </span>{localGPS.alt.toFixed(1)} m
+            <span style={{ color: 'white', fontSize: 10, marginLeft: 8 }}>±{localGPS.accuracy.toFixed(0)} m</span>
           </div>
         </div>
       )}
@@ -135,7 +135,7 @@ export function GPSStatus({
       {!isMobile && allDevices.size > 0 && (
         <div style={{ marginBottom: 10 }}>
           <div style={{
-            color: 'var(--text-secondary)', fontSize: 10,
+            color: 'white', fontSize: 10,
             letterSpacing: '0.08em', textTransform: 'uppercase',
             marginBottom: 8,
           }}>線上裝置 · {allDevices.size}</div>
@@ -149,9 +149,9 @@ export function GPSStatus({
                 borderRadius: 10,
                 marginBottom: 4,
                 background: selectedDeviceId === id
-                  ? 'rgba(0,255,136,0.1)'
+                  ? 'rgba(255,255,255,0.15)'
                   : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${selectedDeviceId === id ? 'rgba(0,255,136,0.35)' : 'rgba(255,255,255,0.06)'}`,
+                border: `1px solid ${selectedDeviceId === id ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.06)'}`,
                 transition: 'background 0.2s, border 0.2s',
               }}
               onMouseEnter={e => {
@@ -165,12 +165,12 @@ export function GPSStatus({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 10 }}>📱</span>
-                <span style={{ color: 'var(--accent-green)', fontWeight: 600, fontSize: 12 }}>
+                <span style={{ color: 'white', fontWeight: 600, fontSize: 12 }}>
                   {d.deviceName}
                 </span>
               </div>
               <div style={{
-                color: 'var(--text-dim)', fontSize: 10,
+                color: 'white', fontSize: 10,
                 fontFamily: 'monospace', marginTop: 3, lineHeight: 1.5,
               }}>
                 {d.lat.toFixed(5)}, {d.lon.toFixed(5)}
@@ -186,10 +186,10 @@ export function GPSStatus({
 
       {/* ── 軌跡資訊 ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>軌跡點</span>
+        <span style={{ color: 'white', fontSize: 11 }}>軌跡點</span>
         <span style={{
-          color: 'var(--accent-cyan)', fontWeight: 700, fontSize: 13,
-          background: 'rgba(0,212,255,0.1)',
+          color: 'white', fontWeight: 700, fontSize: 13,
+          background: 'rgba(255,255,255,0.1)',
           padding: '1px 8px', borderRadius: 10,
         }}>{uavPath.length}</span>
         {uavPath.length > 0 && (
